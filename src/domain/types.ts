@@ -77,6 +77,8 @@ export interface Refill {
   committedAt: Date | null;
   /** Volunteers who have already declined or timed out for this refill */
   declinedVolunteerIds: string[];
+  /** Budget amount reserved when this refill was committed */
+  reservedAmount: Money | null;
   /** Purchase details — filled when volunteer uploads receipt */
   purchaseAmount: Money | null;
   purchasedAt: Date | null;

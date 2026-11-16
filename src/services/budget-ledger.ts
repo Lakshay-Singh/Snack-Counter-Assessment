@@ -105,17 +105,21 @@ export class BudgetLedger {
     entry.pending = addMoney(entry.pending, actual);
   }
 
-  /** Move from pending to spent when HR approves. */
-  confirmSpend(officeId: OfficeId, amount: Money): void {
-    const month = this.currentMonth(officeId);
+  /** Move from pending to spent when HR approves. Uses purchase date to find the correct month. */
+  confirmSpend(officeId: OfficeId, amount: Money, purchaseDate?: Date): void {
+    const month = purchaseDate
+      ? monthKey(purchaseDate, this.offices.get(officeId)!.timezone)
+      : this.currentMonth(officeId);
     const entry = this.getOrCreate(officeId, month);
     entry.pending = subtractMoney(entry.pending, amount);
     entry.spent = addMoney(entry.spent, amount);
   }
 
-  /** Remove from pending when HR rejects (the money was never actually spent from budget). */
-  rejectSpend(officeId: OfficeId, amount: Money): void {
-    const month = this.currentMonth(officeId);
+  /** Remove from pending when HR rejects. Uses purchase date to find the correct month. */
+  rejectSpend(officeId: OfficeId, amount: Money, purchaseDate?: Date): void {
+    const month = purchaseDate
+      ? monthKey(purchaseDate, this.offices.get(officeId)!.timezone)
+      : this.currentMonth(officeId);
     const entry = this.getOrCreate(officeId, month);
     entry.pending = subtractMoney(entry.pending, amount);
   }

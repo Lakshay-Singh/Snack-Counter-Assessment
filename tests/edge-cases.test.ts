@@ -78,6 +78,7 @@ describe("Edge Cases & Safety Guards", () => {
       offeredAt: null,
       committedAt: null,
       declinedVolunteerIds: [],
+      reservedAmount: null,
       purchaseAmount: null,
       purchasedAt: null,
       purchasedItems: [],

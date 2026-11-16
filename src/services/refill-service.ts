@@ -101,6 +101,7 @@ export class RefillService {
       offeredAt: null,
       committedAt: null,
       declinedVolunteerIds: [],
+      reservedAmount: null,
       purchaseAmount: null,
       purchasedAt: null,
       purchasedItems: [],
@@ -142,9 +143,10 @@ export class RefillService {
     );
 
     if (!volunteer) {
-      // Nobody left — escalate
+      // Nobody left — escalate and clear the open slot so a new refill can be created later
       refill.state = RefillState.ESCALATED;
       refill.version++;
+      this.openRefillByOffice.delete(refill.officeId);
       await this.chat.postToOfficeChannel(
         refill.officeId,
         `🚨 No volunteers available for refill ${refill.id}. Coordinator: please assign someone or purchase directly.`
@@ -205,8 +207,9 @@ export class RefillService {
     refill.committedAt = this.clock.now();
     refill.version++;
 
-    // Reserve budget
+    // Reserve budget — store the exact amount so we can release it later
     const cap = this.budget.getSpendCap(refill.officeId);
+    refill.reservedAmount = cap;
     this.budget.reserve(refill.officeId, cap);
 
     this.assigner.markPendingClaim(volunteerId);
@@ -265,10 +268,8 @@ export class RefillService {
     refill.state = RefillState.PURCHASED;
     refill.version++;
 
-    // Update budget: release reservation, record actual spend
-    const cap = this.budget.getSpendCap(refill.officeId);
-    // We reserved the cap amount earlier; now replace with actual
-    this.budget.recordPurchase(refill.officeId, cap, amount);
+    // Update budget: release the exact reservation we stored at commit time
+    this.budget.recordPurchase(refill.officeId, refill.reservedAmount!, amount);
 
     // Auto-submit claim to HR (idempotency key = refill ID)
     await this.submitClaimToHR(refill);
@@ -336,7 +337,7 @@ export class RefillService {
 
     if (approved) {
       refill.state = RefillState.REIMBURSED;
-      this.budget.confirmSpend(refill.officeId, refill.purchaseAmount!);
+      this.budget.confirmSpend(refill.officeId, refill.purchaseAmount!, refill.purchasedAt ?? undefined);
       this.assigner.clearPendingClaim(refill.assigneeId!);
 
       await this.chat.sendDM(
@@ -345,7 +346,7 @@ export class RefillService {
       );
     } else {
       refill.state = RefillState.REJECTED;
-      this.budget.rejectSpend(refill.officeId, refill.purchaseAmount!);
+      this.budget.rejectSpend(refill.officeId, refill.purchaseAmount!, refill.purchasedAt ?? undefined);
       this.assigner.clearPendingClaim(refill.assigneeId!);
 
       await this.chat.sendDM(
@@ -387,9 +388,8 @@ export class RefillService {
         refill.committedAt &&
         now.getTime() - refill.committedAt.getTime() >= PURCHASE_TIMEOUT_MS
       ) {
-        // Release reservation
-        const cap = this.budget.getSpendCap(refill.officeId);
-        this.budget.releaseReservation(refill.officeId, cap);
+        // Release the exact reservation we stored at commit time
+        this.budget.releaseReservation(refill.officeId, refill.reservedAmount!);
         this.assigner.clearPendingClaim(refill.assigneeId!);
 
         refill.declinedVolunteerIds.push(refill.assigneeId!);
@@ -401,6 +401,7 @@ export class RefillService {
 
         refill.assigneeId = null;
         refill.committedAt = null;
+        refill.reservedAmount = null;
         refill.version++;
 
         await this.offerToNext(refill);

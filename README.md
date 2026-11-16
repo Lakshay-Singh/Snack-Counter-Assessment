@@ -10,7 +10,7 @@ Automated snack counter restocking, volunteer fairness rotation, and budget trac
 # 1. Install dependencies
 npm install
 
-# 2. Run all automated test suites (48 tests across 10 suites)
+# 2. Run all automated test suites (51 tests across 11 suites)
 npm test
 
 # 3. Run test coverage
@@ -115,7 +115,7 @@ snack-counter-assessment/
 
 ---
 
-## Test Suites Overview (48 Tests)
+## Test Suites Overview (51 Tests across 11 Suites)
 
 1. `tests/refill-lifecycle.test.ts`:
    - Happy path: `REPORTED` → `OFFERED` → `COMMITTED` → `PURCHASED` → `CLAIM_SUBMITTED` → `REIMBURSED`
@@ -145,3 +145,7 @@ snack-counter-assessment/
    - Strict integer minor unit validation, preventing floating point inaccuracy and cross-currency arithmetic
 10. `tests/edge-cases.test.ts`:
     - Self-serve grab workflows and state guard exceptions
+11. `tests/fixes.test.ts`:
+    - Dynamic budget cap fluctuation resilience (exact reservation release)
+    - Cross-month HR approval ledger alignment
+    - Escalation slot cleanup ensuring future refills are unblocked

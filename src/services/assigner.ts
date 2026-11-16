@@ -54,58 +54,11 @@ export class Assigner {
     volunteers: Volunteer[],
     refill: Refill
   ): Volunteer | null {
-    const now = this.clock.now();
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-
-    // Filter to eligible volunteers
-    const eligible = volunteers.filter((v) => {
-      // Must be at this office (home or visiting)
-      const atOffice = v.homeOfficeId === officeId ||
-        (v.visitingOfficeId === officeId && (!v.visitingUntil || v.visitingUntil > now));
-      if (!atOffice) return false;
-
-      // Must not be away
-      if (v.awayUntil && v.awayUntil > now) return false;
-
-      // Must not have already declined or timed out for this refill
-      if (refill.declinedVolunteerIds.includes(v.id)) return false;
-
-      return true;
-    });
-
-    if (eligible.length === 0) return null;
-
-    // Score and sort
-    const scored = eligible.map((v) => {
-      const hasPending = this.pendingClaimVolunteers.has(v.id);
-      const recentRefills = this.history.filter(
-        (r) => r.volunteerId === v.id && r.completedAt >= ninetyDaysAgo
-      ).length;
-      const lastRefill = this.history
-        .filter((r) => r.volunteerId === v.id)
-        .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())[0];
-      const msSinceLastRefill = lastRefill
-        ? now.getTime() - lastRefill.completedAt.getTime()
-        : Infinity;
-
-      return { volunteer: v, hasPending, recentRefills, msSinceLastRefill };
-    });
-
-    scored.sort((a, b) => {
-      // 1. No pending claim first
-      if (a.hasPending !== b.hasPending) return a.hasPending ? 1 : -1;
-      // 2. Fewest recent refills
-      if (a.recentRefills !== b.recentRefills) return a.recentRefills - b.recentRefills;
-      // 3. Longest since last refill (highest msSince first)
-      if (a.msSinceLastRefill !== b.msSinceLastRefill) return b.msSinceLastRefill - a.msSinceLastRefill;
-      // 4. Stable tie-breaker by volunteer ID
-      return a.volunteer.id.localeCompare(b.volunteer.id);
-    });
-
-    return scored[0].volunteer;
+    const ranked = this.getRankedList(officeId, volunteers, refill);
+    return ranked.length > 0 ? ranked[0] : null;
   }
 
-  /** Get the ranked list of eligible volunteers (for testing / debugging). */
+  /** Get the ranked list of eligible volunteers (for testing / debugging / rotation). */
   getRankedList(
     officeId: OfficeId,
     volunteers: Volunteer[],

@@ -36,6 +36,7 @@ function makeRefill(officeId: OfficeId, declined: string[] = []): Refill {
     offeredAt: null,
     committedAt: null,
     declinedVolunteerIds: [...declined],
+    reservedAmount: null,
     purchaseAmount: null,
     purchasedAt: null,
     purchasedItems: [],
