@@ -1,4 +1,4 @@
-# Snack Counter Automation — Framsikt Product Engineer Assessment
+# Snack Counter Automation - Framsikt Product Engineer Assessment
 
 Automated snack counter restocking, volunteer fairness rotation, and budget tracking for Framsikt's **Oslo** and **Bengaluru** offices.
 
